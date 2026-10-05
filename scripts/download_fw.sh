@@ -29,6 +29,7 @@ IMEI=""
 SERIAL_NO=""
 LATEST_FIRMWARE=""
 ZIP_FILE=""
+DESIRED_FIRMWARE=""
 
 PREPARE_SCRIPT()
 {
@@ -133,17 +134,28 @@ for i in "${FIRMWARES[@]}"; do
         exit 1
     fi
 
+    DESIRED_FIRMWARE="$LATEST_FIRMWARE"
+    if [[ "$i" == "$SOURCE_FIRMWARE" ]] && [[ "${SOURCE_FIRMWARE_VERSION:-none}" != "none" ]]; then
+        DESIRED_FIRMWARE="$SOURCE_FIRMWARE_VERSION"
+    elif [[ "$i" == "$TARGET_FIRMWARE" ]] && [[ "${TARGET_FIRMWARE_VERSION:-none}" != "none" ]]; then
+        DESIRED_FIRMWARE="$TARGET_FIRMWARE_VERSION"
+    elif [ -n "${PINNED_FW_VERSION:-}" ]; then
+        # Backwards-compatible override for callers that still use the old CI variable.
+        DESIRED_FIRMWARE="$PINNED_FW_VERSION"
+    fi
+
     LOG_STEP_IN "- Processing $MODEL firmware with $CSC CSC"
     LOG "- Downloaded firmware: $(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" 2> /dev/null)"
     LOG "- Extracted firmware: $(cat "$FW_DIR/${MODEL}_${CSC}/.extracted" 2> /dev/null)"
     LOG "- Latest available firmware: $LATEST_FIRMWARE"
+    LOG "- Selected firmware: $DESIRED_FIRMWARE"
 
     LOG_STEP_IN
 
     if ! $FORCE; then
         # Skip if firmware has been extracted and equal/newer than the one in FUS
         if [ -f "$FW_DIR/${MODEL}_${CSC}/.extracted" ]; then
-            if COMPARE_SEC_BUILD_VERSION "$(cat "$FW_DIR/${MODEL}_${CSC}/.extracted")" "$LATEST_FIRMWARE"; then
+            if COMPARE_SEC_BUILD_VERSION "$(cat "$FW_DIR/${MODEL}_${CSC}/.extracted")" "$DESIRED_FIRMWARE"; then
                 LOG "\033[0;33m! This firmware has already been extracted, skipping\033[0m"
                 LOG_STEP_OUT; LOG_STEP_OUT
                 continue
@@ -152,7 +164,7 @@ for i in "${FIRMWARES[@]}"; do
 
         # Skip if firmware has already been downloaded
         if [ -f "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" ]; then
-            if ! COMPARE_SEC_BUILD_VERSION "$(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded")" "$LATEST_FIRMWARE"; then
+            if ! COMPARE_SEC_BUILD_VERSION "$(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded")" "$DESIRED_FIRMWARE"; then
                 LOG "\033[0;33m! A newer firmware is available for download, use --force flag if you want to overwrite it\033[0m"
             else
                 LOG "\033[0;33m! This firmware has already been downloaded\033[0m"
@@ -174,7 +186,7 @@ for i in "${FIRMWARES[@]}"; do
         (
         cd "$OUT_DIR"
         FW_VER_ARG=()
-        [ -n "${PINNED_FW_VERSION:-}" ] && FW_VER_ARG=("-v" "$PINNED_FW_VERSION")
+        [[ "$DESIRED_FIRMWARE" != "$LATEST_FIRMWARE" ]] && FW_VER_ARG=("-v" "$DESIRED_FIRMWARE")
         samloader -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download "${FW_VER_ARG[@]}" -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null || exit 1
         )
 
@@ -198,7 +210,7 @@ for i in "${FIRMWARES[@]}"; do
 
     VERIFY_ODIN_PACKAGES
 
-    echo -n "$LATEST_FIRMWARE" > "$ODIN_DIR/${MODEL}_${CSC}/.downloaded"
+    echo -n "$DESIRED_FIRMWARE" > "$ODIN_DIR/${MODEL}_${CSC}/.downloaded"
 
     LOG_STEP_OUT; LOG_STEP_OUT
 done

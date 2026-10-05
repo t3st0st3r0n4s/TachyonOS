@@ -1,4 +1,4 @@
-name: Build ExtremeROM
+name: Build TachyonOS r0s FYI3
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [beyond0lte, beyond1lte, beyond2lte, beyondx, x1s, y2s, z3s, c1s, c2s, r8s, o1s, t2s, p3s, r9s, r0s, b0s, g0s]
+        target: [r0s]
 
     steps:
       - name: Checkout repo
@@ -55,14 +55,16 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
+      - name: Validate r0s pins
+        run: |
+          ./scripts/validate_r0s_fyi3.sh
+
       - name: Build dependencies
         run: |
           source ./buildenv.sh ${{ matrix.target }}
           ./scripts/build_dependencies.sh
 
       - name: Download source firmware
-        env:
-          PINNED_FW_VERSION: "S721BXXS7BYH1"
         run: |
           source ./buildenv.sh ${{ matrix.target }}
           ./scripts/download_fw.sh --force --ignore-target
@@ -87,17 +89,10 @@ jobs:
           source ./buildenv.sh ${{ matrix.target }}
           ./scripts/make_rom.sh --force
 
-      - name: Upload to GoFile
+      - name: Generate checksums
         run: |
           ZIP_FILE=$(find out -maxdepth 1 -type f -name "*.zip" | head -n 1)
-
-          RESPONSE=$(curl -s -F "file=@$ZIP_FILE" -F "token=${{ secrets.GOFILE_TOKEN }}" -F "folderId=${{ secrets.GOFILE_FOLDER_ID }}" "https://upload-eu-par.gofile.io/uploadFile")
-
-          echo "Uploaded successfully! Download link:"
-          echo "$RESPONSE" | jq -r '.data.downloadPage'
-
-          echo "MD5:"
+          test -n "$ZIP_FILE" && test -f "$ZIP_FILE"
+          ls -lh "$ZIP_FILE"
           md5sum "$ZIP_FILE"
-
-          echo "SHA256:"
           sha256sum "$ZIP_FILE"

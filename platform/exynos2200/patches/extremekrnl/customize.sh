@@ -5,45 +5,52 @@ fi
 
 # [
 EXTREMEKRNL_REPO="https://github.com/ExtremeXT/android_kernel_samsung_s5e9925"
+# Last identified One UI 7 / Android 15 kernel state before commit 75f49ed3
+# bumped boot.img metadata to Android 16 / 2025-09.
+EXTREMEKRNL_COMMIT="9ac30b43ebf74a607bf778d479609ab7ccf0797b"
 
 BUILD_KERNEL()
 {
-    local PARENT=$(pwd)
-    cd $KERNEL_TMP_DIR
+    local PARENT
+    PARENT="$(pwd)"
+    cd "$KERNEL_TMP_DIR" || exit 1
 
     EVAL "./build.sh -m ${TARGET_CODENAME} -k y"
 
-    cd $PARENT
+    cd "$PARENT" || exit 1
 }
 
-SAFE_PULL_CHANGES()
+PREPARE_PINNED_KERNEL()
 {
-    set -eo pipefail
+    local PARENT
+    PARENT="$(pwd)"
 
-    local PARENT=$(pwd)
-
-    cd "$KERNEL_TMP_DIR"
-
-    EVAL "git fetch origin"
-
-    LOCAL=$(git rev-parse @)
-    REMOTE=$(git rev-parse origin/main)
-    BASE=$(git merge-base @ origin/main)
-
-    # Now we have three cases that we need to take care of.
-    if [[ "$LOCAL" == "$REMOTE" ]]; then
-        LOG "- Local branch is up-to-date with remote."
-    elif [[ "$LOCAL" == "$BASE" ]]; then
-        LOG "- Fast-forward possible. Pulling."
-        EVAL "git pull --ff-only"
-    elif [[ "$REMOTE" == "$BASE" ]]; then
-        LOGW "- Local branch is ahead of remote. Not doing anything."
+    if [[ -d "$KERNEL_TMP_DIR/.git" ]]; then
+        cd "$KERNEL_TMP_DIR" || exit 1
+        if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            cd "$PARENT" || exit 1
+            ABORT "ExtremeKRNL checkout has local tracked changes; refusing to overwrite them."
+        fi
+        LOG "- Existing ExtremeKRNL checkout found; refreshing refs"
+        EVAL "git fetch --all --tags --prune"
     else
-        cd "$PARENT"
-        ABORT "Remote history has diverged (possible force-push)."
+        rm -rf "$KERNEL_TMP_DIR"
+        LOG "- Cloning ExtremeKRNL"
+        EVAL "git clone \"$EXTREMEKRNL_REPO\" \"$KERNEL_TMP_DIR\""
+        cd "$KERNEL_TMP_DIR" || exit 1
     fi
 
-    cd "$PARENT"
+    git cat-file -e "${EXTREMEKRNL_COMMIT}^{commit}" 2>/dev/null || {
+        cd "$PARENT" || exit 1
+        ABORT "Pinned ExtremeKRNL commit $EXTREMEKRNL_COMMIT is unavailable."
+    }
+
+    LOG "- Checking out pinned ExtremeKRNL: $EXTREMEKRNL_COMMIT"
+    EVAL "git checkout --detach \"$EXTREMEKRNL_COMMIT\""
+    EVAL "git submodule sync --recursive"
+    EVAL "git submodule update --init --recursive"
+
+    cd "$PARENT" || exit 1
 }
 
 REPLACE_KERNEL_BINARIES()
@@ -51,17 +58,9 @@ REPLACE_KERNEL_BINARIES()
     local KERNEL_TMP_DIR="$KERNEL_TMP_DIR-$TARGET_PLATFORM"
     [[ ! -d "$KERNEL_TMP_DIR" ]] && mkdir -p "$KERNEL_TMP_DIR"
 
-    if [[ -d "$KERNEL_TMP_DIR/.git" ]]; then
-        LOG "- Existing git repo found, trying to pull latest changes"
-        if ! SAFE_PULL_CHANGES; then
-            ABORT "Could not pull latest Kernel changes. If you hold local changes, please rebase to the new base. If not, cleaning the kernel_tmp_dir should suffice."
-        fi
-    else
-        LOG "- Cloning ExtremeKernel"
-        EVAL "git clone "$EXTREMEKRNL_REPO" --single-branch "$KERNEL_TMP_DIR" --recurse-submodules"
-    fi
+    PREPARE_PINNED_KERNEL
 
-    LOG "- Running the kernel build script."
+    LOG "- Running the pinned kernel build script."
     BUILD_KERNEL
 
     for i in "boot" "dtbo" "vendor_boot"; do

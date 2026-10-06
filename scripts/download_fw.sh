@@ -87,6 +87,56 @@ PRINT_USAGE()
     echo " -f, --force : Force firmware download" >&2
 }
 
+NORMALIZE_FUS_VERSION()
+{
+    local VERSION="$1"
+    local AP CSC CP DATA
+
+    IFS='/' read -r AP CSC CP DATA <<< "$VERSION"
+    [ -n "$AP" ] || return 1
+    [ -n "$CSC" ] || return 1
+    [ -n "$CP" ] || CP="$AP"
+    [ -n "$DATA" ] || DATA="$AP"
+
+    printf '%s/%s/%s/%s\n' "$AP" "$CSC" "$CP" "$DATA"
+}
+
+VERIFY_ODIN_IDENTITY()
+{
+    local EXPECTED
+    local AP_FILE CSC_FILE CP_FILE
+    local AP CSC CP ACTUAL
+
+    EXPECTED="$(NORMALIZE_FUS_VERSION "$1")" || {
+        LOGE "Invalid expected FUS version: $1"
+        return 1
+    }
+
+    AP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -maxdepth 1 -type f -name 'AP_*.tar.md5' | head -n 1)"
+    CSC_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -maxdepth 1 -type f -name 'CSC_*.tar.md5' | head -n 1)"
+    CP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -maxdepth 1 -type f -name 'CP_*.tar.md5' | head -n 1)"
+
+    if [ ! "$AP_FILE" ] || [ ! "$CSC_FILE" ] || [ ! "$CP_FILE" ]; then
+        LOGE "Could not identify AP/CSC/CP packages in downloaded firmware"
+        return 1
+    fi
+
+    AP="$(basename "$AP_FILE" | cut -d '_' -f 2)"
+    CSC="$(basename "$CSC_FILE" | cut -d '_' -f 3)"
+    CP="$(basename "$CP_FILE" | cut -d '_' -f 2)"
+    ACTUAL="$AP/$CSC/$CP/$AP"
+
+    LOG "- Requested firmware identity: $EXPECTED"
+    LOG "- Downloaded firmware identity: $ACTUAL"
+
+    if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+        LOGE "Downloaded Odin package does not match the requested firmware"
+        return 1
+    fi
+
+    return 0
+}
+
 VERIFY_ODIN_PACKAGES()
 {
     local FILE_NAME
@@ -94,7 +144,10 @@ VERIFY_ODIN_PACKAGES()
     local STORED_HASH
     local CALCULATED_HASH
 
+    local PACKAGE_COUNT=0
+
     while IFS= read -r f; do
+        ((PACKAGE_COUNT++))
         FILE_NAME="$(basename "$f")"
         LOG_STEP_IN "- Verifying $FILE_NAME..."
 
@@ -121,6 +174,11 @@ VERIFY_ODIN_PACKAGES()
 
         LOG_STEP_OUT
     done < <(find "$ODIN_DIR/${MODEL}_${CSC}" -type f -name "*.md5")
+
+    if [ "$PACKAGE_COUNT" -eq 0 ]; then
+        LOGE "No Odin tar.md5 packages found to verify"
+        exit 1
+    fi
 }
 # ]
 
@@ -151,6 +209,11 @@ for i in "${FIRMWARES[@]}"; do
         fi
         DESIRED_FIRMWARE="$LATEST_FIRMWARE"
     fi
+
+    DESIRED_FIRMWARE="$(NORMALIZE_FUS_VERSION "$DESIRED_FIRMWARE")" || {
+        LOGE "Selected firmware version is invalid: $DESIRED_FIRMWARE"
+        exit 1
+    }
 
     LOG_STEP_IN "- Processing $MODEL firmware with $CSC CSC"
     LOG "- Downloaded firmware: $(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" 2> /dev/null)"
@@ -236,6 +299,10 @@ for i in "${FIRMWARES[@]}"; do
     EVAL "unzip -o \"$ZIP_FILE\" -d \"$ODIN_DIR/${MODEL}_${CSC}\" && rm -rf \"$ZIP_FILE\"" || exit 1
 
     VERIFY_ODIN_PACKAGES
+    VERIFY_ODIN_IDENTITY "$DESIRED_FIRMWARE" || {
+        rm -f "$ODIN_DIR/${MODEL}_${CSC}/.downloaded"
+        exit 1
+    }
 
     echo -n "$DESIRED_FIRMWARE" > "$ODIN_DIR/${MODEL}_${CSC}/.downloaded"
 

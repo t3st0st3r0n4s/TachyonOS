@@ -25,6 +25,7 @@ FIRMWARES=()
 MODEL=""
 CSC=""
 LATEST_FIRMWARE=""
+EXPECTED_FIRMWARE=""
 DOWNLOADED_FIRMWARE=""
 BL_TAR=""
 AP_TAR=""
@@ -368,48 +369,51 @@ PREPARE_SCRIPT "$@"
 for i in "${FIRMWARES[@]}"; do
     PARSE_FIRMWARE_STRING "$i" || exit 1
 
-    LATEST_FIRMWARE="$(GET_LATEST_FIRMWARE "$MODEL" "$CSC")"
-    if [ ! "$LATEST_FIRMWARE" ]; then
-        LOGE "Latest available firmware could not be fetched"
-        exit 1
+    EXPECTED_FIRMWARE=""
+    if [[ "$i" == "$SOURCE_FIRMWARE" ]] && [[ "${SOURCE_FIRMWARE_VERSION:-none}" != "none" ]]; then
+        EXPECTED_FIRMWARE="$SOURCE_FIRMWARE_VERSION"
+    elif [[ "$i" == "$TARGET_FIRMWARE" ]] && [[ "${TARGET_FIRMWARE_VERSION:-none}" != "none" ]]; then
+        EXPECTED_FIRMWARE="$TARGET_FIRMWARE_VERSION"
+    elif [ -n "${PINNED_FW_VERSION:-}" ]; then
+        EXPECTED_FIRMWARE="$PINNED_FW_VERSION"
     fi
 
-    LOG_STEP_IN "- Processing $MODEL firmware with $CSC CSC"
-    LOG "- Downloaded firmware: $(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" 2> /dev/null)"
-    LOG "- Extracted firmware: $(cat "$FW_DIR/${MODEL}_${CSC}/.extracted" 2> /dev/null)"
-    LOG "- Latest available firmware: $LATEST_FIRMWARE"
-
-    LOG_STEP_IN
-
-    if ! $FORCE; then
-        # Skip if firmware has been extracted
-        if [ -f "$FW_DIR/${MODEL}_${CSC}/.extracted" ]; then
-            if ! COMPARE_SEC_BUILD_VERSION "$(cat "$FW_DIR/${MODEL}_${CSC}/.extracted")" "$LATEST_FIRMWARE"; then
-                if [ -f "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" ] && \
-                        ! COMPARE_SEC_BUILD_VERSION "$(cat "$FW_DIR/${MODEL}_${CSC}/.extracted")" "$(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded")"; then
-                    LOG "\033[0;33m! A newer firmware has been downloaded, use --force flag if you want to overwrite it\033[0m"
-                else
-                    LOG "\033[0;33m! A newer firmware is available for download\033[0m"
-                fi
-            else
-                LOG "\033[0;33m! This firmware has already been extracted\033[0m"
-            fi
-
-            LOG_STEP_OUT; LOG_STEP_OUT
-            continue
-        fi
-    fi
-
-    # Abort if firmware has not been downloaded
+    # Abort if firmware has not been downloaded.
     if [ ! -f "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" ]; then
         LOG "\033[0;31m! The firmware has not been downloaded\033[0m"
         exit 1
     fi
 
-    [ -f "$FW_DIR/${MODEL}_${CSC}/.extracted" ] && rm -rf "$FW_DIR/${MODEL}_${CSC}"
-    mkdir -p "$FW_DIR/${MODEL}_${CSC}"
-
     DOWNLOADED_FIRMWARE="$(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded")"
+
+    if [ -n "$EXPECTED_FIRMWARE" ] && [[ "$DOWNLOADED_FIRMWARE" != "$EXPECTED_FIRMWARE" ]]; then
+        LOGE "Downloaded firmware does not match configured pin"
+        LOGE "Expected: $EXPECTED_FIRMWARE"
+        LOGE "Found:    $DOWNLOADED_FIRMWARE"
+        exit 1
+    fi
+
+    LOG_STEP_IN "- Processing $MODEL firmware with $CSC CSC"
+    LOG "- Downloaded firmware: $DOWNLOADED_FIRMWARE"
+    LOG "- Extracted firmware: $(cat "$FW_DIR/${MODEL}_${CSC}/.extracted" 2> /dev/null)"
+    [ -n "$EXPECTED_FIRMWARE" ] && LOG "- Configured pinned firmware: $EXPECTED_FIRMWARE"
+
+    LOG_STEP_IN
+
+    if ! $FORCE && [ -f "$FW_DIR/${MODEL}_${CSC}/.extracted" ]; then
+        if [[ "$(cat "$FW_DIR/${MODEL}_${CSC}/.extracted")" == "$DOWNLOADED_FIRMWARE" ]]; then
+            LOG "\033[0;33m! This exact downloaded firmware has already been extracted\033[0m"
+            LOG_STEP_OUT; LOG_STEP_OUT
+            continue
+        fi
+
+        LOG "\033[0;33m! Extracted firmware differs from downloaded firmware; use --force to overwrite it\033[0m"
+        LOG_STEP_OUT; LOG_STEP_OUT
+        continue
+    fi
+
+    [ -d "$FW_DIR/${MODEL}_${CSC}" ] && rm -rf "$FW_DIR/${MODEL}_${CSC}"
+    mkdir -p "$FW_DIR/${MODEL}_${CSC}"
 
     BL_TAR="$(find "$ODIN_DIR/${MODEL}_${CSC}" -name "BL_$(cut -d "/" -f 1 -s <<< "$DOWNLOADED_FIRMWARE")*.md5" | sort -r | head -n 1)"
     AP_TAR="$(find "$ODIN_DIR/${MODEL}_${CSC}" -name "AP_$(cut -d "/" -f 1 -s <<< "$DOWNLOADED_FIRMWARE")*.md5" | sort -r | head -n 1)"

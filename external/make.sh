@@ -138,6 +138,7 @@ APKTOOL=true
 EROFS_UTILS=true
 IMG2SDAT=true
 SAMLOADER=true
+SAMLOADER_RS=true
 SIGNAPK=true
 SMALI=true
 OMCDECODER=true
@@ -167,6 +168,10 @@ SAMLOADER_EXEC=(
     "../venv/bin/samloader"
 )
 CHECK_TOOLS "${SAMLOADER_EXEC[@]}" && SAMLOADER=false
+SAMLOADER_RS_EXEC=(
+    "samloader-rs"
+)
+CHECK_TOOLS "${SAMLOADER_RS_EXEC[@]}" && SAMLOADER_RS=false
 SIGNAPK_EXEC=(
     "signapk" "signapk.jar"
 )
@@ -186,6 +191,7 @@ if [[ "$1" == "--check-tools" ]]; then
             ! $EROFS_UTILS && \
             ! $IMG2SDAT && \
             ! $SAMLOADER && \
+            ! $SAMLOADER_RS && \
             ! $SIGNAPK && \
             ! $SMALI && \
             ! $OMCDECODER; then
@@ -255,6 +261,23 @@ if $SAMLOADER; then
     )
 
     BUILD "samloader" "$SRC_DIR/external/samloader" "${SAMLOADER_CMDS[@]}"
+fi
+if $SAMLOADER_RS; then
+    SAMLOADER_RS_VERSION="2.2.0"
+    SAMLOADER_RS_ARCHIVE="samloader-v${SAMLOADER_RS_VERSION}-linux-x86_64.zip"
+    SAMLOADER_RS_URL="https://github.com/topjohnwu/samloader-rs/releases/download/${SAMLOADER_RS_VERSION}/${SAMLOADER_RS_ARCHIVE}"
+    SAMLOADER_RS_SHA256="f6029dcce75b8a66acc1975529085c53903f7cdb35505e0ac0a973f2652480ff"
+    SAMLOADER_RS_CMDS=(
+        "rm -f \"$TOOLS_DIR/$SAMLOADER_RS_ARCHIVE\""
+        "curl -fL --retry 5 --retry-delay 2 \"$SAMLOADER_RS_URL\" -o \"$TOOLS_DIR/$SAMLOADER_RS_ARCHIVE\""
+        "echo \"$SAMLOADER_RS_SHA256  $TOOLS_DIR/$SAMLOADER_RS_ARCHIVE\" | sha256sum -c -"
+        "unzip -p \"$TOOLS_DIR/$SAMLOADER_RS_ARCHIVE\" samloader > \"$TOOLS_DIR/bin/samloader-rs\""
+        "chmod +x \"$TOOLS_DIR/bin/samloader-rs\""
+        "rm -f \"$TOOLS_DIR/$SAMLOADER_RS_ARCHIVE\""
+        "\"$TOOLS_DIR/bin/samloader-rs\" --version"
+    )
+
+    BUILD "samloader-rs" "$SRC_DIR" "${SAMLOADER_RS_CMDS[@]}"
 fi
 if $SIGNAPK; then
     SIGNAPK_CMDS=(

@@ -253,47 +253,68 @@ for i in "${FIRMWARES[@]}"; do
     [ -f "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" ] && rm -rf "$ODIN_DIR/${MODEL}_${CSC}"
     mkdir -p "$ODIN_DIR/${MODEL}_${CSC}"
 
-    COUNT=1
-    # Loop infinetely until download succeeds
-    while true; do
-        # shellcheck disable=SC2164
-        # Anan's samloader stores its logs in the current working directory, let's move into OUT_DIR just for this time
-        (
-        cd "$OUT_DIR"
-        FW_VER_ARG=()
-        $FIRMWARE_IS_PINNED && FW_VER_ARG=("-v" "$DESIRED_FIRMWARE")
-        SAMLOADER_ERR="$OUT_DIR/samloader-${MODEL}_${CSC}.err"
-        if ! samloader -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download "${FW_VER_ARG[@]}" \
-                -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null 2> "$SAMLOADER_ERR"; then
-            cat "$SAMLOADER_ERR" >&2
-            if grep -Eq 'getlogiccheck\(\) input too short|DownloadBinaryInform returned (400|403|404)' "$SAMLOADER_ERR"; then
-                LOGE "FUS rejected the requested firmware/version; not retrying a deterministic error"
-                exit 2
-            fi
-            exit 1
-        fi
-        rm -f "$SAMLOADER_ERR"
-        )
-
-        SAMLOADER_RC=$?
-        if [ "$SAMLOADER_RC" -eq 2 ]; then
+    if $FIRMWARE_IS_PINNED; then
+        if ! type samloader-rs &> /dev/null; then
+            LOGE "samloader-rs is required for exact pinned firmware downloads; run scripts/build_dependencies.sh"
             exit 1
         fi
 
-        ZIP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -name "*.zip" | sort -r | head -n 1)"
+        LOG "- Verifying pinned firmware is present in Samsung history..."
+        FIRMWARE_HISTORY="$(samloader-rs check-update -m "$MODEL" -r "$CSC" --all)" || {
+            LOGE "samloader-rs could not fetch Samsung firmware history"
+            exit 1
+        }
+        if ! grep -Fxq "$DESIRED_FIRMWARE" <<< "$FIRMWARE_HISTORY"; then
+            LOGE "Pinned firmware is not present in Samsung firmware history: $DESIRED_FIRMWARE"
+            exit 1
+        fi
+
+        LOG "- Pinned firmware found in Samsung history"
+        samloader-rs download \
+            -m "$MODEL" \
+            -r "$CSC" \
+            -v "$DESIRED_FIRMWARE" \
+            -d "$ODIN_DIR/${MODEL}_${CSC}" || {
+                LOGE "samloader-rs failed to download pinned firmware"
+                exit 1
+            }
+
+        ZIP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -maxdepth 1 -type f -name "*.zip" | sort -r | head -n 1)"
         if [ ! "$ZIP_FILE" ] || [ ! -f "$ZIP_FILE" ]; then
-            if [ $COUNT -gt 10 ]; then
-                LOGW "\033[0;31m! Download failed, check your network connection or device IMEI!\033[0m"
+            LOGE "samloader-rs completed but no firmware zip was produced"
+            exit 1
+        fi
+    else
+        COUNT=1
+        # Legacy unpinned path: retry transient failures from the Python samloader.
+        while true; do
+            # shellcheck disable=SC2164
+            (
+            cd "$OUT_DIR"
+            SAMLOADER_ERR="$OUT_DIR/samloader-${MODEL}_${CSC}.err"
+            if ! samloader -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download \
+                    -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null 2> "$SAMLOADER_ERR"; then
+                cat "$SAMLOADER_ERR" >&2
                 exit 1
             fi
+            rm -f "$SAMLOADER_ERR"
+            )
 
-            LOGW "\033[0;31m! [Attempt: $COUNT] Download failed, retrying in 5 seconds...\033[0m"
-            sleep 5
-            ((COUNT++))
-        else
-            break
-        fi
-    done
+            ZIP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -name "*.zip" | sort -r | head -n 1)"
+            if [ ! "$ZIP_FILE" ] || [ ! -f "$ZIP_FILE" ]; then
+                if [ $COUNT -gt 10 ]; then
+                    LOGW "\033[0;31m! Download failed, check your network connection or device IMEI!\033[0m"
+                    exit 1
+                fi
+
+                LOGW "\033[0;31m! [Attempt: $COUNT] Download failed, retrying in 5 seconds...\033[0m"
+                sleep 5
+                COUNT=$((COUNT + 1))
+            else
+                break
+            fi
+        done
+    fi
 
     LOG "- Extracting $(basename "$ZIP_FILE")..."
     EVAL "unzip -o \"$ZIP_FILE\" -d \"$ODIN_DIR/${MODEL}_${CSC}\" && rm -rf \"$ZIP_FILE\"" || exit 1

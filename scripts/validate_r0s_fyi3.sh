@@ -28,6 +28,15 @@ done
     || fail "scripts/build_dependencies.sh symlink target changed"
 [ -x external/make.sh ] || fail "external/make.sh must remain executable"
 
+grep -Fq 'SAMLOADER_RS_VERSION="2.2.0"' external/make.sh \
+    || fail "samloader-rs version pin changed"
+grep -Fq 'SAMLOADER_RS_SHA256="f6029dcce75b8a66acc1975529085c53903f7cdb35505e0ac0a973f2652480ff"' external/make.sh \
+    || fail "samloader-rs release checksum pin changed"
+grep -Fq 'samloader-rs check-update' scripts/download_fw.sh \
+    || fail "pinned firmware history gate missing"
+grep -Fq 'samloader-rs download' scripts/download_fw.sh \
+    || fail "pinned firmware downloader changed"
+
 grep -Fq 'SOURCE_FIRMWARE_VERSION="S721BXXS7BYH1/S721BOXM7BYH1/S721BXXS7BYH1/S721BXXS7BYH1"' unica/configs/essi_64.sh \
     || fail "S24 FE source FUS version is not pinned to canonical four-part BYH1"
 grep -Fq 'TARGET_ASSERT_MODEL=("SM-S901B")' target/r0s/config.sh \

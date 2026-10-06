@@ -28,12 +28,12 @@ done
     || fail "scripts/build_dependencies.sh symlink target changed"
 [ -x external/make.sh ] || fail "external/make.sh must remain executable"
 
-grep -Fq 'SOURCE_FIRMWARE_VERSION="S721BXXS7BYH1"' unica/configs/essi_64.sh \
-    || fail "S24 FE source firmware is not pinned to S721BXXS7BYH1"
+grep -Fq 'SOURCE_FIRMWARE_VERSION="S721BXXS7BYH1/S721BOXM7BYH1/S721BXXS7BYH1"' unica/configs/essi_64.sh \
+    || fail "S24 FE source FUS version is not pinned to BYH1"
 grep -Fq 'TARGET_ASSERT_MODEL=("SM-S901B")' target/r0s/config.sh \
     || fail "r0s target model assertion changed"
-grep -Fq 'TARGET_FIRMWARE_VERSION="S901BXXSIFYI3"' target/r0s/config.sh \
-    || fail "S901B target firmware is not pinned to FYI3"
+grep -Fq 'TARGET_FIRMWARE_VERSION="S901BXXSIFYI3/S901BOXMIFYI3/S901BXXSIFYI3"' target/r0s/config.sh \
+    || fail "S901B target FUS version is not pinned to FYI3"
 grep -Fq 'EXTREMEKRNL_COMMIT="9ac30b43ebf74a607bf778d479609ab7ccf0797b"' \
     platform/exynos2200/patches/extremekrnl/customize.sh \
     || fail "ExtremeKRNL pin changed"
@@ -48,10 +48,10 @@ grep -Fq 'KERNELSU_MANAGER_SHA256="878b5b62819f078ee82423353ce38acf1f7a807747194
 # shellcheck disable=SC1091
 source ./buildenv.sh r0s >/dev/null
 
-[[ "$SOURCE_FIRMWARE_VERSION" == "S721BXXS7BYH1" ]] || fail "generated source firmware pin mismatch"
+[[ "$SOURCE_FIRMWARE_VERSION" == "S721BXXS7BYH1/S721BOXM7BYH1/S721BXXS7BYH1" ]] || fail "generated source FUS pin mismatch"
 [[ "$TARGET_CODENAME" == "r0s" ]] || fail "generated target codename mismatch"
 [[ "$TARGET_ASSERT_MODEL" == "SM-S901B" ]] || fail "generated target model mismatch"
-[[ "$TARGET_FIRMWARE_VERSION" == "S901BXXSIFYI3" ]] || fail "generated target firmware pin mismatch"
+[[ "$TARGET_FIRMWARE_VERSION" == "S901BXXSIFYI3/S901BOXMIFYI3/S901BXXSIFYI3" ]] || fail "generated target FUS pin mismatch"
 [[ "$TARGET_API_LEVEL" == "35" ]] || fail "target API changed from Android 15/API 35"
 
 echo "PASS: TachyonOS r0s FYI3 bootstrap pins are intact"

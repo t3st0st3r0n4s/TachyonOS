@@ -199,8 +199,23 @@ for i in "${FIRMWARES[@]}"; do
         cd "$OUT_DIR"
         FW_VER_ARG=()
         $FIRMWARE_IS_PINNED && FW_VER_ARG=("-v" "$DESIRED_FIRMWARE")
-        samloader -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download "${FW_VER_ARG[@]}" -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null || exit 1
+        SAMLOADER_ERR="$OUT_DIR/samloader-${MODEL}_${CSC}.err"
+        if ! samloader -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download "${FW_VER_ARG[@]}" \
+                -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null 2> "$SAMLOADER_ERR"; then
+            cat "$SAMLOADER_ERR" >&2
+            if grep -Eq 'getlogiccheck\(\) input too short|DownloadBinaryInform returned (400|403|404)' "$SAMLOADER_ERR"; then
+                LOGE "FUS rejected the requested firmware/version; not retrying a deterministic error"
+                exit 2
+            fi
+            exit 1
+        fi
+        rm -f "$SAMLOADER_ERR"
         )
+
+        SAMLOADER_RC=$?
+        if [ "$SAMLOADER_RC" -eq 2 ]; then
+            exit 1
+        fi
 
         ZIP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -name "*.zip" | sort -r | head -n 1)"
         if [ ! "$ZIP_FILE" ] || [ ! -f "$ZIP_FILE" ]; then

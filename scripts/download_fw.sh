@@ -30,6 +30,7 @@ SERIAL_NO=""
 LATEST_FIRMWARE=""
 ZIP_FILE=""
 DESIRED_FIRMWARE=""
+FIRMWARE_IS_PINNED=false
 
 PREPARE_SCRIPT()
 {
@@ -128,27 +129,38 @@ PREPARE_SCRIPT "$@"
 for i in "${FIRMWARES[@]}"; do
     PARSE_FIRMWARE_STRING "$i" || exit 1
 
-    LATEST_FIRMWARE="$(GET_LATEST_FIRMWARE "$MODEL" "$CSC")"
-    if [ ! "$LATEST_FIRMWARE" ]; then
-        LOGE "Latest available firmware could not be fetched"
-        exit 1
-    fi
+    LATEST_FIRMWARE=""
+    DESIRED_FIRMWARE=""
+    FIRMWARE_IS_PINNED=false
 
-    DESIRED_FIRMWARE="$LATEST_FIRMWARE"
     if [[ "$i" == "$SOURCE_FIRMWARE" ]] && [[ "${SOURCE_FIRMWARE_VERSION:-none}" != "none" ]]; then
         DESIRED_FIRMWARE="$SOURCE_FIRMWARE_VERSION"
+        FIRMWARE_IS_PINNED=true
     elif [[ "$i" == "$TARGET_FIRMWARE" ]] && [[ "${TARGET_FIRMWARE_VERSION:-none}" != "none" ]]; then
         DESIRED_FIRMWARE="$TARGET_FIRMWARE_VERSION"
+        FIRMWARE_IS_PINNED=true
     elif [ -n "${PINNED_FW_VERSION:-}" ]; then
         # Backwards-compatible override for callers that still use the old CI variable.
         DESIRED_FIRMWARE="$PINNED_FW_VERSION"
+        FIRMWARE_IS_PINNED=true
+    else
+        LATEST_FIRMWARE="$(GET_LATEST_FIRMWARE "$MODEL" "$CSC")"
+        if [ ! "$LATEST_FIRMWARE" ]; then
+            LOGE "Latest available firmware could not be fetched"
+            exit 1
+        fi
+        DESIRED_FIRMWARE="$LATEST_FIRMWARE"
     fi
 
     LOG_STEP_IN "- Processing $MODEL firmware with $CSC CSC"
     LOG "- Downloaded firmware: $(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" 2> /dev/null)"
     LOG "- Extracted firmware: $(cat "$FW_DIR/${MODEL}_${CSC}/.extracted" 2> /dev/null)"
-    LOG "- Latest available firmware: $LATEST_FIRMWARE"
-    LOG "- Selected firmware: $DESIRED_FIRMWARE"
+    if $FIRMWARE_IS_PINNED; then
+        LOG "- Selected pinned firmware: $DESIRED_FIRMWARE"
+    else
+        LOG "- Latest available firmware: $LATEST_FIRMWARE"
+        LOG "- Selected firmware: $DESIRED_FIRMWARE"
+    fi
 
     LOG_STEP_IN
 
@@ -186,7 +198,7 @@ for i in "${FIRMWARES[@]}"; do
         (
         cd "$OUT_DIR"
         FW_VER_ARG=()
-        [[ "$DESIRED_FIRMWARE" != "$LATEST_FIRMWARE" ]] && FW_VER_ARG=("-v" "$DESIRED_FIRMWARE")
+        $FIRMWARE_IS_PINNED && FW_VER_ARG=("-v" "$DESIRED_FIRMWARE")
         samloader -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download "${FW_VER_ARG[@]}" -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null || exit 1
         )
 

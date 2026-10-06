@@ -105,7 +105,7 @@ VERIFY_ODIN_IDENTITY()
 {
     local EXPECTED
     local AP_FILE CSC_FILE CP_FILE
-    local AP CSC CP ACTUAL
+    local ACTUAL_AP ACTUAL_CSC ACTUAL_CP ACTUAL
 
     EXPECTED="$(NORMALIZE_FUS_VERSION "$1")" || {
         LOGE "Invalid expected FUS version: $1"
@@ -121,10 +121,10 @@ VERIFY_ODIN_IDENTITY()
         return 1
     fi
 
-    AP="$(basename "$AP_FILE" | cut -d '_' -f 2)"
-    CSC="$(basename "$CSC_FILE" | cut -d '_' -f 3)"
-    CP="$(basename "$CP_FILE" | cut -d '_' -f 2)"
-    ACTUAL="$AP/$CSC/$CP/$AP"
+    ACTUAL_AP="$(basename "$AP_FILE" | cut -d '_' -f 2)"
+    ACTUAL_CSC="$(basename "$CSC_FILE" | cut -d '_' -f 3)"
+    ACTUAL_CP="$(basename "$CP_FILE" | cut -d '_' -f 2)"
+    ACTUAL="$ACTUAL_AP/$ACTUAL_CSC/$ACTUAL_CP/$ACTUAL_AP"
 
     LOG "- Requested firmware identity: $EXPECTED"
     LOG "- Downloaded firmware identity: $ACTUAL"
@@ -147,7 +147,7 @@ VERIFY_ODIN_PACKAGES()
     local PACKAGE_COUNT=0
 
     while IFS= read -r f; do
-        ((PACKAGE_COUNT++))
+        PACKAGE_COUNT=$((PACKAGE_COUNT + 1))
         FILE_NAME="$(basename "$f")"
         LOG_STEP_IN "- Verifying $FILE_NAME..."
 

@@ -45,8 +45,6 @@ jobs:
           sudo modprobe erofs f2fs
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          echo -n "${{ secrets.PLATFORM_KEY_PK8 }}" | base64 --decode > security/extremerom_platform.pk8
-          echo -n "${{ secrets.PLATFORM_KEY_PEM }}" | base64 --decode > security/extremerom_platform.x509.pem
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -96,3 +94,11 @@ jobs:
           ls -lh "$ZIP_FILE"
           md5sum "$ZIP_FILE"
           sha256sum "$ZIP_FILE"
+
+      - name: Upload ROM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TachyonOS-r0s-FYI3
+          path: out/TachyonOS_*_r0s*.zip
+          if-no-files-found: error
+          compression-level: 0

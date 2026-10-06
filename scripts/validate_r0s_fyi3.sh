@@ -13,6 +13,7 @@ fail()
 for script in \
     scripts/download_fw.sh \
     scripts/internal/gen_config_file.sh \
+    external/make.sh \
     platform/exynos2200/patches/extremekrnl/customize.sh \
     unica/mods/preload/customize.sh; do
     bash -n "$script" || fail "shell syntax check failed: $script"

@@ -18,6 +18,11 @@
 
 # shellcheck disable=SC1007,SC2164,SC2291
 
+# The dependency build applies vendored patch series with `git am`.
+# Keep builds independent of the host user's personal/global Git identity.
+export GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-TachyonOS Build}"
+export GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-build@tachyonos.invalid}"
+
 # [
 BUILD()
 {

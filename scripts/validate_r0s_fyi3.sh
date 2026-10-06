@@ -12,6 +12,7 @@ fail()
 
 for script in \
     scripts/download_fw.sh \
+    scripts/extract_fw.sh \
     scripts/internal/gen_config_file.sh \
     external/make.sh \
     platform/exynos2200/patches/extremekrnl/customize.sh \
@@ -36,6 +37,8 @@ grep -Fq 'samloader-rs check-update' scripts/download_fw.sh \
     || fail "pinned firmware history gate missing"
 grep -Fq 'samloader-rs download' scripts/download_fw.sh \
     || fail "pinned firmware downloader changed"
+grep -Fq 'Downloaded firmware does not match configured pin' scripts/extract_fw.sh \
+    || fail "pinned firmware extraction guard missing"
 
 grep -Fq 'SOURCE_FIRMWARE_VERSION="S721BXXS7BYH1/S721BOXM7BYH1/S721BXXS7BYH1/S721BXXS7BYH1"' unica/configs/essi_64.sh \
     || fail "S24 FE source FUS version is not pinned to canonical four-part BYH1"

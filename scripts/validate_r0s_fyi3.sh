@@ -22,6 +22,11 @@ for script in scripts/download_fw.sh scripts/internal/gen_config_file.sh; do
     [ -x "$script" ] || fail "required executable bit missing: $script"
 done
 
+[ -L scripts/build_dependencies.sh ] || fail "scripts/build_dependencies.sh must remain a symlink"
+[[ "$(readlink scripts/build_dependencies.sh)" == "../external/make.sh" ]] \
+    || fail "scripts/build_dependencies.sh symlink target changed"
+[ -x external/make.sh ] || fail "external/make.sh must remain executable"
+
 grep -Fq 'SOURCE_FIRMWARE_VERSION="S721BXXS7BYH1"' unica/configs/essi_64.sh \
     || fail "S24 FE source firmware is not pinned to S721BXXS7BYH1"
 grep -Fq 'TARGET_ASSERT_MODEL=("SM-S901B")' target/r0s/config.sh \

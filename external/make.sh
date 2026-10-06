@@ -182,7 +182,8 @@ if [[ "$1" == "--check-tools" ]]; then
             ! $IMG2SDAT && \
             ! $SAMLOADER && \
             ! $SIGNAPK && \
-            ! $SMALI; then
+            ! $SMALI && \
+            ! $OMCDECODER; then
         exit 0
     else
         exit 1

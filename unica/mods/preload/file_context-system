@@ -4,3 +4,6 @@
 /system/preload/SafetyCore/SafetyCore\.apk u:object_r:system_file:s0
 /system/preload/ContactKeys u:object_r:system_file:s0
 /system/preload/ContactKeys/ContactKeys\.apk u:object_r:system_file:s0
+/system/etc/tachyon u:object_r:system_file:s0
+/system/etc/tachyon/install_manager\.sh u:object_r:system_file:s0
+/system/etc/init/tachyon_manager\.rc u:object_r:system_file:s0

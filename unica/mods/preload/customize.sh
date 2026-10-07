@@ -1,12 +1,17 @@
 KERNELSU_MANAGER_APK="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v1.1.0/KernelSU_Next_v1.1.0-spoofed_12862-release.apk"
 KERNELSU_MANAGER_SHA256="878b5b62819f078ee82423353ce38acf1f7a80774719430b62c16e1fde98c02d"
-# https://github.com/tiann/KernelSU/issues/886
-APK_PATH="system/preload/KernelSU-Next/com.rifsxd.ksunext-mesa==/base.apk"
+KERNELSU_MANAGER_PAYLOAD="system/etc/tachyon/manager_payload.bin"
 
-LOG "- Adding KernelSU-Next.apk to preload apps"
-mkdir -p "$WORK_DIR/system/$(dirname "$APK_PATH")"
-DOWNLOAD_FILE "$KERNELSU_MANAGER_APK" "$WORK_DIR/system/$APK_PATH"
-echo "$KERNELSU_MANAGER_SHA256  $WORK_DIR/system/$APK_PATH" | sha256sum -c - || ABORT "KernelSU Manager checksum mismatch"
+LOG "- Adding KernelSU-Next manager payload"
+mkdir -p "$WORK_DIR/system/$(dirname "$KERNELSU_MANAGER_PAYLOAD")"
+DOWNLOAD_FILE "$KERNELSU_MANAGER_APK" "$WORK_DIR/system/$KERNELSU_MANAGER_PAYLOAD"
+echo "$KERNELSU_MANAGER_SHA256  $WORK_DIR/system/$KERNELSU_MANAGER_PAYLOAD" | sha256sum -c - || ABORT "KernelSU Manager checksum mismatch"
+
+sed -i "\|^system/etc/tachyon/manager_payload.bin |d" "$WORK_DIR/configs/fs_config-system"
+echo "system/etc/tachyon/manager_payload.bin 0 0 644 capabilities=0x0" >> "$WORK_DIR/configs/fs_config-system"
+
+sed -i "\|^/system/etc/tachyon/manager_payload\\.bin |d" "$WORK_DIR/configs/file_context-system"
+echo "/system/etc/tachyon/manager_payload\\.bin u:object_r:system_file:s0" >> "$WORK_DIR/configs/file_context-system"
 
 sed -i "/system\/preload/d" "$WORK_DIR/configs/fs_config-system"
 sed -i "/system\/preload/d" "$WORK_DIR/configs/file_context-system"

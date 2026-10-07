@@ -4,3 +4,6 @@ system/preload/SafetyCore 0 0 755 capabilities=0x0
 system/preload/SafetyCore/SafetyCore.apk 0 0 644 capabilities=0x0
 system/preload/ContactKeys 0 0 755 capabilities=0x0
 system/preload/ContactKeys/ContactKeys.apk 0 0 644 capabilities=0x0
+system/etc/tachyon 0 0 755 capabilities=0x0
+system/etc/tachyon/install_manager.sh 0 0 644 capabilities=0x0
+system/etc/init/tachyon_manager.rc 0 0 644 capabilities=0x0

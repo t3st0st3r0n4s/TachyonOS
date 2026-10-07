@@ -2,7 +2,7 @@
 
 PAYLOAD="/system/etc/tachyon/manager_payload.bin"
 TEMP="/data/local/tmp/.tachyon_manager.apk"
-MARKER="/data/local/tmp/.tachyon_manager_12862_installed"
+MARKER="/data/local/tmp/.tachyon_manager_33294_installed"
 
 # One automatic install per /data lifetime.
 # Deliberate later uninstall must not cause resurrection on every boot.

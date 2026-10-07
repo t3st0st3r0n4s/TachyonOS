@@ -8,6 +8,7 @@ EXTREMEKRNL_REPO="https://github.com/ExtremeXT/android_kernel_samsung_s5e9925"
 # Last identified One UI 7 / Android 15 kernel state before commit 75f49ed3
 # bumped boot.img metadata to Android 16 / 2025-09.
 EXTREMEKRNL_COMMIT="9ac30b43ebf74a607bf778d479609ab7ccf0797b"
+EXTREMEKRNL_KERNELSU_COMMIT="1a879d6a866f80b1fa1c1009a2ffa747873cbb5e"
 
 BUILD_KERNEL()
 {
@@ -27,7 +28,7 @@ PREPARE_PINNED_KERNEL()
 
     if [[ -d "$KERNEL_TMP_DIR/.git" ]]; then
         cd "$KERNEL_TMP_DIR" || exit 1
-        if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+        if [ -n "$(git status --porcelain --untracked-files=no --ignore-submodules=all)" ]; then
             cd "$PARENT" || exit 1
             ABORT "ExtremeKRNL checkout has local tracked changes; refusing to overwrite them."
         fi
@@ -49,6 +50,14 @@ PREPARE_PINNED_KERNEL()
     EVAL "git checkout --detach \"$EXTREMEKRNL_COMMIT\""
     EVAL "git submodule sync --recursive"
     EVAL "git submodule update --init --recursive"
+
+    LOG "- Pinning KernelSU Next: $EXTREMEKRNL_KERNELSU_COMMIT"
+    EVAL "git -C KernelSU-Next fetch --all --tags --prune"
+    git -C KernelSU-Next cat-file -e "${EXTREMEKRNL_KERNELSU_COMMIT}^{commit}" 2>/dev/null || {
+        cd "$PARENT" || exit 1
+        ABORT "Pinned KernelSU Next commit $EXTREMEKRNL_KERNELSU_COMMIT is unavailable."
+    }
+    EVAL "git -C KernelSU-Next checkout --detach \"$EXTREMEKRNL_KERNELSU_COMMIT\""
 
     cd "$PARENT" || exit 1
 }

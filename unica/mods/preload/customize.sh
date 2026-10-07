@@ -1,5 +1,5 @@
-KERNELSU_MANAGER_APK="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v1.1.0/KernelSU_Next_v1.1.0-spoofed_12862-release.apk"
-KERNELSU_MANAGER_SHA256="878b5b62819f078ee82423353ce38acf1f7a80774719430b62c16e1fde98c02d"
+KERNELSU_MANAGER_APK="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.0/KernelSU_Next_v3.4.0-spoofed_33294-release.apk"
+KERNELSU_MANAGER_SHA256="84558aca2f82367f66534a7776aacb08f71d19fcb4e82d712c689d961f0e602b"
 KERNELSU_MANAGER_PAYLOAD="system/etc/tachyon/manager_payload.bin"
 
 LOG "- Adding KernelSU-Next manager payload"

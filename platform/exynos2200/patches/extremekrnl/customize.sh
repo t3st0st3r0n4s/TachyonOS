@@ -60,24 +60,29 @@ REPLACE_KERNEL_BINARIES()
 
     PREPARE_PINNED_KERNEL
 
-    LOG "- Running the pinned kernel build script."
-    BUILD_KERNEL
+    if [ -f "$KERNEL_TMP_DIR/build/out/$TARGET_CODENAME/.completed" ]; then
+        LOG "- Existing completed ExtremeKRNL build found, reusing it."
+    else
+        LOG "- Running the pinned kernel build script."
+        BUILD_KERNEL
+        touch "$KERNEL_TMP_DIR/build/out/$TARGET_CODENAME/.completed"
+    fi
 
     for i in "boot" "dtbo" "vendor_boot"; do
         [[ -f "$WORK_DIR/kernel/$i.img" ]] && rm -f "$WORK_DIR/kernel/$i.img"
-        mv -f "$KERNEL_TMP_DIR/build/out/$TARGET_CODENAME/$i.img" "$WORK_DIR/kernel/$i.img"
+        cp -af "$KERNEL_TMP_DIR/build/out/$TARGET_CODENAME/$i.img" "$WORK_DIR/kernel/$i.img"
     done
 }
 
 UPDATE_MODULES()
 {
     for i in "fingerprint" "fingerprint_sysfs" "input_booster_lkm" "sec_debug_coredump"; do
-        mv -f "$KERNEL_TMP_DIR-$TARGET_PLATFORM/build/out/$TARGET_CODENAME/modules_dlkm/$i.ko" "$WORK_DIR/vendor_dlkm/lib/modules"
+        cp -af "$KERNEL_TMP_DIR-$TARGET_PLATFORM/build/out/$TARGET_CODENAME/modules_dlkm/$i.ko" "$WORK_DIR/vendor_dlkm/lib/modules"
     done
     if [[ "$TARGET_CODENAME" == "r0s" || "$TARGET_CODENAME" == "r11s" ]]; then
-        mv -f "$KERNEL_TMP_DIR-$TARGET_PLATFORM/build/out/$TARGET_CODENAME/modules_dlkm/wlan.ko" "$WORK_DIR/vendor_dlkm/lib/modules"
+        cp -af "$KERNEL_TMP_DIR-$TARGET_PLATFORM/build/out/$TARGET_CODENAME/modules_dlkm/wlan.ko" "$WORK_DIR/vendor_dlkm/lib/modules"
     else
-        mv -f "$KERNEL_TMP_DIR-$TARGET_PLATFORM/build/out/$TARGET_CODENAME/modules_dlkm/dhd.ko" "$WORK_DIR/vendor_dlkm/lib/modules"
+        cp -af "$KERNEL_TMP_DIR-$TARGET_PLATFORM/build/out/$TARGET_CODENAME/modules_dlkm/dhd.ko" "$WORK_DIR/vendor_dlkm/lib/modules"
     fi
 }
 # ]

@@ -51,13 +51,6 @@ elif [[ "$TARGET_CODENAME" == "b0s" ]]; then
     system/lib64/libhigh_res.arcsoft.so
     "
 fi
-# The r0s FYI3 HRE wrapper dlopens this ArcSoft library.
-# Restrict restoration to r0s; other Exynos 2200 targets use different camera blobs.
-if [[ "$TARGET_CODENAME" == "r0s" ]]; then
-    BLOBS_LIST+="
-    system/lib64/libhighres_enhancement.arcsoft.so
-    "
-fi
 for blob in $BLOBS_LIST
 do
     ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "$blob" 0 0 644 "u:object_r:system_lib_file:s0" &

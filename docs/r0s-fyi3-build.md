@@ -74,16 +74,24 @@ Each TachyonOS kernel integration prepares the pinned sources and compares the m
 
 Do not erase the cache for routine KernelSU upgrades. 'scripts/cleanup.sh kernel' removes the cached kernel checkout and outputs. The marker is not a cryptographic hash of all artefacts: keep the build report and checksums when diagnosing unexpected output changes.
 
-### Manager APK is pinned independently
+### Matched KernelSU Next v3.4.1 manager preload
 
-'unica/mods/preload/customize.sh' still preloads the **KernelSU Next v3.4.0 spoofed manager APK** (manager code 33294) using its recorded SHA256. This does **not** mean the built-in kernel is v3.4.0. The qualified device reports:
+The **kernel and ROM-preloaded manager are now both pinned to v3.4.1 / 33333**.
 
-~~~text
-su -v: 3.4.1:KernelSU
-su -V: 33333
-~~~
+- KernelSU kernel source commit: '8f902aeb16033024143ae36cf711df902cf02fae' (built-in).
+- Official spoofed manager asset: 'KernelSU_Next_v3.4.1-spoofed_33333-release.apk'.
+- Download: https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.1/KernelSU_Next_v3.4.1-spoofed_33333-release.apk
+- Official GitHub release asset SHA256: 'f41778ee812512ae96bf53e7265114de5e0414bc5cb92397f49e1052d77da118'.
+- Pin location: 'unica/mods/preload/customize.sh'. The ROM build verifies the downloaded manager payload against the pinned SHA256 before packaging it.
 
-The first-boot manager install hook and its 'u:r:ksu:s0' init context were **not changed** as part of the kernel upgrade. Treat any manager APK upgrade as a distinct, separately verified change.
+The previously tested manager installation design remains intact:
+
+- ROM payload: '/system/etc/tachyon/manager_payload.bin'.
+- Init entry: 'exec_background u:r:ksu:s0 root root -- /system/bin/sh /system/etc/tachyon/install_manager.sh' on 'sys.boot_completed=1'.
+- Install command: 'pm install -r' using a temporary copied APK in '/data/local/tmp/'.
+- New one-time marker: '/data/local/tmp/.tachyon_manager_33333_installed'. The old v3.4.0 marker ('..._33294_installed') does not suppress the v3.4.1 install after an upgraded ROM is flashed. Following success, the versioned marker prevents repeated automatic reinstalls on subsequent boots.
+
+**Qualification boundary:** the v3.4.1 kernel was already flashed and tested on-device, but the **new v3.4.1 ROM preload and automatic manager upgrade have not yet undergone a full rebuilt-ROM / first-boot test**. A GitHub pin change does not update the manager APK on an already flashed handset; it takes effect when a ROM containing the new payload is built and installed, or by separately installing the verified v3.4.1 APK.
 
 ## Host and device qualification (2026-10-10)
 
@@ -117,6 +125,6 @@ bash scripts/validate_r0s_fyi3.sh
 ./scripts/make_rom.sh
 ~~~
 
-The validator checks firmware/configuration pins, source kernel/KernelSU pins, compatibility patch and manager preload; **it is not a substitute for compilation or on-device testing**. A normal build should reuse the pinned kernel cache on a cache hit.
+The validator checks firmware/configuration pins, source kernel/KernelSU pins, compatibility patch, v3.4.1 spoofed manager APK SHA256 pin and v3.4.1 installer marker; **it is not a substitute for compilation or on-device testing**. A normal build should reuse the pinned kernel cache on a cache hit.
 
 Canonical v3.4.1 integration promotion: af60a9bdedcec432e220c0c282b1f0ad0ac5546d.

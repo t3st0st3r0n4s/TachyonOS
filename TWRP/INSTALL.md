@@ -4,7 +4,7 @@
 
 ## Flash
 
-1. Boot into **Download Mode** and connect the phone to your computer.
+1. Power off the phone. Connect the USB cable to the computer, but not yet to the phone. Hold **Volume Up + Volume Down** on the phone, then plug in the cable while holding both buttons. At the warning screen, release the buttons and press **Volume Up** to enter **Download Mode**.
 2. Flash `S901B_twrp_vbmeta_only.tar`:
    - **Windows (Odin):** Select the TAR in **AP**, leave other slots empty, disable **Auto Reboot**, and click **Start**.
    - **Linux (Odin4):**

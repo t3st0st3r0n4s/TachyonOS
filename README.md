@@ -27,18 +27,6 @@ ExtremeROM Nexus supports devices using the Exynos 9820, Exynos 990, Exynos 2100
 
 Any form of contribution, suggestions, bug report or feature request for the project will be welcome.
 
-## r0s-fyi3 branch: Galaxy S22 Exynos (SM-S901B)
-
-The **r0s-fyi3** branch targets Android 15 (One UI 7) with the pinned **S901B EUX FYI3** target firmware and **S24 FE BYH1** source firmware. The integrated ExtremeKRNL kernel is **5.10.238**, with built-in **KernelSU Next v3.4.1** (commit '8f902aeb'). Its source pin, incremental kernel cache, rollback precautions, validation gates, and full build arguments are documented in **[r0s FYI3 build and kernel notes](docs/r0s-fyi3-build.md)**.
-
-~~~bash
-source ./buildenv.sh r0s
-bash scripts/validate_r0s_fyi3.sh
-./scripts/make_rom.sh
-~~~
-
-For a forced **ROM workdir** rebuild (not necessarily a kernel recompile), use './scripts/make_rom.sh --force'. The v3.4.1 kernel was host-validated, flashed by TWRP, and confirmed booting with root, SELinux enforcing, and the five selected modules loaded on an S901B. This does not represent a complete hardware functional regression test. The ROM now pins the matching KernelSU Next v3.4.1 spoofed manager APK (33333); its boot-time upgrade from the previous preload remains to be validated in a rebuilt ROM.
-
 # Features
 - Based on the latest stable OneUI 7 Galaxy S24 FE firmware
 - All software features from S24 FE

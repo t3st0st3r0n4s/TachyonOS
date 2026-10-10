@@ -1,6 +1,6 @@
 # TachyonOS SM-S901B (r0s) — FYI3 build and kernel notes
 
-Status: 2026-10-10. Applies to the **r0s-fyi3** branch, not every target.
+Status: 2026-10-10. Applies to the **r0s-fyi3** branch, not every target. Configured release: **TachyonOS 1.1.0 (Agnes)**, with the short Git commit appended to the built ROM version.
 
 ## Target and firmware
 

@@ -37,7 +37,7 @@ bash scripts/validate_r0s_fyi3.sh
 ./scripts/make_rom.sh
 ~~~
 
-For a forced **ROM workdir** rebuild (not necessarily a kernel recompile), use './scripts/make_rom.sh --force'. The v3.4.1 kernel was host-validated, flashed by TWRP, and confirmed booting with root, SELinux enforcing, and the five selected modules loaded on an S901B. This does not represent a complete hardware functional regression test. The ROM-preloaded manager APK is currently pinned independently to v3.4.0.
+For a forced **ROM workdir** rebuild (not necessarily a kernel recompile), use './scripts/make_rom.sh --force'. The v3.4.1 kernel was host-validated, flashed by TWRP, and confirmed booting with root, SELinux enforcing, and the five selected modules loaded on an S901B. This does not represent a complete hardware functional regression test. The ROM now pins the matching KernelSU Next v3.4.1 spoofed manager APK (33333); its boot-time upgrade from the previous preload remains to be validated in a rebuilt ROM.
 
 # Features
 - Based on the latest stable OneUI 7 Galaxy S24 FE firmware

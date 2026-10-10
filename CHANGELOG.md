@@ -1,5 +1,13 @@
 # TachyonOS Changelog
 
+## r0s-fyi3 maintenance — 2026-10-10 (no ROM version bump)
+
+- Promoted built-in KernelSU Next **v3.4.1** (commit '8f902aeb') with pinned ExtremeKRNL '9ac30b43' for Galaxy S22 Exynos (SM-S901B), Android 15 / FYI3.
+- Confirmed **incremental** host build, correct KernelSU release tag, ZIP/image integrity, byte-identical five selected vendor modules and matching module ABI (9,772 symbols with no CRC changes).
+- Device-confirmed TWRP flash, Android boot, KernelSU root access, SELinux enforcing and loading of the five selected modules; broader hardware functional regression is not yet recorded.
+- Preserved the v3.4.0 rollback backup and the previously validated compatibility-patch bytes. The ROM-preloaded manager APK remains independently pinned to **v3.4.0**.
+- Updated the FYI3 source-pin validation guard and added branch-specific [build, cache and qualification documentation](docs/r0s-fyi3-build.md).
+
 # 1.0.7
 - updated KernelSU
 

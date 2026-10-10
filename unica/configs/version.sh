@@ -15,10 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Branch: fifteen
+# Branch: r0s-fyi3
 VERSION_MAJOR=1
-VERSION_MINOR=0
-VERSION_PATCH=7
+VERSION_MINOR=1
+VERSION_PATCH=0
 
 
 ROM_VERSION="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"

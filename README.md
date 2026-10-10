@@ -16,6 +16,17 @@
   <a href="https://github.com/ExtremeXT/ExtremeROM/blob/fifteen/MAINTAINERS">🧑‍💻 Maintainers</a>
 </p>
 
+# What is TachyonOS?
+TachyonOS is a work-in-progress custom firmware for Samsung Galaxy devices.
+
+It's based on the latest and greatest iteration of Samsung's UX and it also includes additional features and tweaks to ensure the best possible experience out of the box.
+
+It is based on the UN1CA build system which allows automatic downloading/extraction of the firmware, applying the required patches and generating a flashable zip package for the specified target device.
+
+ExtremeROM Nexus supports devices using the Exynos 9820, Exynos 990, Exynos 2100 and Exynos 2200 SoCs
+
+Any form of contribution, suggestions, bug report or feature request for the project will be welcome.
+
 ## r0s-fyi3 branch: Galaxy S22 Exynos (SM-S901B)
 
 The **r0s-fyi3** branch targets Android 15 (One UI 7) with the pinned **S901B EUX FYI3** target firmware and **S24 FE BYH1** source firmware. The integrated ExtremeKRNL kernel is **5.10.238**, with built-in **KernelSU Next v3.4.1** (commit '8f902aeb'). Its source pin, incremental kernel cache, rollback precautions, validation gates, and full build arguments are documented in **[r0s FYI3 build and kernel notes](docs/r0s-fyi3-build.md)**.
@@ -27,17 +38,6 @@ bash scripts/validate_r0s_fyi3.sh
 ~~~
 
 For a forced **ROM workdir** rebuild (not necessarily a kernel recompile), use './scripts/make_rom.sh --force'. The v3.4.1 kernel was host-validated, flashed by TWRP, and confirmed booting with root, SELinux enforcing, and the five selected modules loaded on an S901B. This does not represent a complete hardware functional regression test. The ROM-preloaded manager APK is currently pinned independently to v3.4.0.
-
-# What is TachyonOS?
-TachyonOS is a work-in-progress custom firmware for Samsung Galaxy devices.
-
-It's based on the latest and greatest iteration of Samsung's UX and it also includes additional features and tweaks to ensure the best possible experience out of the box.
-
-It is based on the UN1CA build system which allows automatic downloading/extraction of the firmware, applying the required patches and generating a flashable zip package for the specified target device.
-
-ExtremeROM Nexus supports devices using the Exynos 9820, Exynos 990, Exynos 2100 and Exynos 2200 SoCs
-
-Any form of contribution, suggestions, bug report or feature request for the project will be welcome.
 
 # Features
 - Based on the latest stable OneUI 7 Galaxy S24 FE firmware

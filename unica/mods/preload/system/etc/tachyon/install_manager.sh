@@ -2,9 +2,10 @@
 
 PAYLOAD="/system/etc/tachyon/manager_payload.bin"
 TEMP="/data/local/tmp/.tachyon_manager.apk"
-MARKER="/data/local/tmp/.tachyon_manager_33294_installed"
+MARKER="/data/local/tmp/.tachyon_manager_33333_installed"
 
-# One automatic install per /data lifetime.
+# One automatic install per manager release per /data lifetime.
+# A new marker allows v3.4.0 -> v3.4.1 upgrade on a later ROM flash.
 # Deliberate later uninstall must not cause resurrection on every boot.
 [ -f "$MARKER" ] && exit 0
 

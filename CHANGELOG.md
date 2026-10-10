@@ -1,7 +1,14 @@
 # TachyonOS Changelog
 
+# 1.1.0
+- Updated Galaxy S22 (SM-S901B) to FYI3 firmware with pinned S24 FE BYH1 source
+- Restored FYI3 ArcSoft high-resolution camera enhancement library
+- Updated KernelSU Next kernel and matching manager to v3.4.1
+- Fixed manager installation after boot and versioned upgrade handling
+- Improved firmware download verification, build dependencies and incremental build caching
+
 # 1.0.7
-- Updated KernelSU Next kernel and manager to v3.4.1
+- Updated KernelSU
 
 # 1.0.6
 - Fixed Face Recognition (thx @szucsy92 & @Creeeeger)

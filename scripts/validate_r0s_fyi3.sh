@@ -58,18 +58,25 @@ grep -Fq 'ksunext-v3.4.0-compat.patch' platform/exynos2200/patches/extremekrnl/c
     || fail "KernelSU Next compatibility patch reference changed"
 echo "b1f3ea7f4f3c8fe104ae1a0ad8fc3a67a0971eb3fc5f9be43b0856e2ce805f2f  platform/exynos2200/patches/extremekrnl/ksunext-v3.4.0-compat.patch" | sha256sum -c - >/dev/null \
     || fail "KernelSU Next compatibility patch hash changed"
-grep -Fq 'KERNELSU_MANAGER_APK="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.0/KernelSU_Next_v3.4.0-spoofed_33294-release.apk"' \
+grep -Fq 'KERNELSU_MANAGER_APK="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.1/KernelSU_Next_v3.4.1-spoofed_33333-release.apk"' \
     unica/mods/preload/customize.sh \
     || fail "KernelSU Next Manager pin changed"
-grep -Fq 'KERNELSU_MANAGER_SHA256="84558aca2f82367f66534a7776aacb08f71d19fcb4e82d712c689d961f0e602b"' \
+grep -Fq 'KERNELSU_MANAGER_SHA256="f41778ee812512ae96bf53e7265114de5e0414bc5cb92397f49e1052d77da118"' \
     unica/mods/preload/customize.sh \
     || fail "KernelSU Next Manager checksum pin changed"
 grep -Fxq '    exec_background u:r:ksu:s0 root root -- /system/bin/sh /system/etc/tachyon/install_manager.sh' \
     unica/mods/preload/system/etc/init/tachyon_manager.rc \
     || fail "KernelSU Next manager init context changed"
-grep -Fq 'MARKER="/data/local/tmp/.tachyon_manager_33294_installed"' \
+grep -Fq 'MARKER="/data/local/tmp/.tachyon_manager_33333_installed"' \
     unica/mods/preload/system/etc/tachyon/install_manager.sh \
     || fail "KernelSU Next manager install marker changed"
+
+grep -Fq 'PAYLOAD="/system/etc/tachyon/manager_payload.bin"' \
+    unica/mods/preload/system/etc/tachyon/install_manager.sh \
+    || fail "KernelSU Next manager payload install path changed"
+grep -Fq '/system/bin/pm install -r "$TEMP"' \
+    unica/mods/preload/system/etc/tachyon/install_manager.sh \
+    || fail "KernelSU Next manager update install command changed"
 
 # Validate generated configuration as the build system sees it.
 # shellcheck disable=SC1091

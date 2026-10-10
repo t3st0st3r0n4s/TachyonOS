@@ -8,7 +8,8 @@ EXTREMEKRNL_REPO="https://github.com/ExtremeXT/android_kernel_samsung_s5e9925"
 # Last identified One UI 7 / Android 15 kernel state before commit 75f49ed3
 # bumped boot.img metadata to Android 16 / 2025-09.
 EXTREMEKRNL_COMMIT="9ac30b43ebf74a607bf778d479609ab7ccf0797b"
-EXTREMEKRNL_KERNELSU_COMMIT="1a879d6a866f80b1fa1c1009a2ffa747873cbb5e"
+EXTREMEKRNL_KERNELSU_COMMIT="8f902aeb16033024143ae36cf711df902cf02fae"
+# Retain the proven compatibility patch (also validated with v3.4.1).
 EXTREMEKRNL_KSU_COMPAT_PATCH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ksunext-v3.4.0-compat.patch"
 
 BUILD_KERNEL()
@@ -19,7 +20,7 @@ BUILD_KERNEL()
     PARENT="$(pwd)"
     cd "$KERNEL_TMP_DIR" || exit 1
 
-    LOG "- Applying KernelSU Next v3.4.0 compatibility patch"
+    LOG "- Applying KernelSU Next v3.4.1 compatibility patch"
     git apply --check "$EXTREMEKRNL_KSU_COMPAT_PATCH" || {
         cd "$PARENT" || exit 1
         ABORT "KernelSU Next compatibility patch does not apply cleanly."

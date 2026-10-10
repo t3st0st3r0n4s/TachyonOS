@@ -87,6 +87,8 @@ source ./buildenv.sh r0s >/dev/null
 [[ "$TARGET_ASSERT_MODEL" == "SM-S901B" ]] || fail "generated target model mismatch"
 [[ "$TARGET_FIRMWARE_VERSION" == "S901BXXSIFYI3/S901BOXMIFYI3/S901BXXSIFYI3/S901BXXSIFYI3" ]] || fail "generated target four-part FUS pin mismatch"
 [[ "$TARGET_API_LEVEL" == "35" ]] || fail "target API changed from Android 15/API 35"
+[[ "$ROM_VERSION" == "1.1.0-$(git rev-parse --short HEAD)" ]] || fail "generated TachyonOS version differs from 1.1.0 with commit suffix"
+[[ "$ROM_CODENAME" == "Agnes" ]] || fail "TachyonOS codename changed"
 
 [[ "$(awk -F/ '{print NF}' <<< "$SOURCE_FIRMWARE_VERSION")" == "4" ]] || fail "source FUS pin must have four components"
 [[ "$(awk -F/ '{print NF}' <<< "$TARGET_FIRMWARE_VERSION")" == "4" ]] || fail "target FUS pin must have four components"

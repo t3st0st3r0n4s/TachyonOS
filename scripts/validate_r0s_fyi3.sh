@@ -49,9 +49,15 @@ grep -Fq 'TARGET_FIRMWARE_VERSION="S901BXXSIFYI3/S901BOXMIFYI3/S901BXXSIFYI3/S90
 grep -Fq 'EXTREMEKRNL_COMMIT="9ac30b43ebf74a607bf778d479609ab7ccf0797b"' \
     platform/exynos2200/patches/extremekrnl/customize.sh \
     || fail "ExtremeKRNL pin changed"
-grep -Fq 'EXTREMEKRNL_KERNELSU_COMMIT="1a879d6a866f80b1fa1c1009a2ffa747873cbb5e"' \
+grep -Fq 'EXTREMEKRNL_KERNELSU_COMMIT="8f902aeb16033024143ae36cf711df902cf02fae"' \
     platform/exynos2200/patches/extremekrnl/customize.sh \
-    || fail "KernelSU Next kernel commit pin changed"
+    || fail "KernelSU Next v3.4.1 kernel commit pin changed"
+
+# The proven v3.4.0-named compatibility patch is deliberately retained for v3.4.1.
+grep -Fq 'ksunext-v3.4.0-compat.patch' platform/exynos2200/patches/extremekrnl/customize.sh \
+    || fail "KernelSU Next compatibility patch reference changed"
+echo "b1f3ea7f4f3c8fe104ae1a0ad8fc3a67a0971eb3fc5f9be43b0856e2ce805f2f  platform/exynos2200/patches/extremekrnl/ksunext-v3.4.0-compat.patch" | sha256sum -c - >/dev/null \
+    || fail "KernelSU Next compatibility patch hash changed"
 grep -Fq 'KERNELSU_MANAGER_APK="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.0/KernelSU_Next_v3.4.0-spoofed_33294-release.apk"' \
     unica/mods/preload/customize.sh \
     || fail "KernelSU Next Manager pin changed"

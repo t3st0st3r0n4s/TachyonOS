@@ -1,0 +1,2 @@
+# Manual-only cloud kernel release trigger on experimental branch.
+# Change this file in a dedicated commit only when ready to run CI.

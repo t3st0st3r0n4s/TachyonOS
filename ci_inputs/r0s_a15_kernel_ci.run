@@ -2,3 +2,5 @@
 # Change this file in a dedicated commit only when ready to run CI.
 
 trigger=first-fyi3-cloud-kernel-host-run
+
+trigger=retry-after-sha256-record-format-fix

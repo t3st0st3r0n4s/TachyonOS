@@ -119,8 +119,9 @@ jobs:
           curl --fail --location --retry 3 --silent --show-error \
             "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/platform/exynos2200/patches/extremekrnl/ksunext-v3.4.0-compat.patch" \
             -o "$RUNNER_TEMP/ksunext-compat.patch"
-          echo 'b1f3ea7f4f3c8fe104ae1a0ad8fc3a67a0971eb3fc5f9be43b0856e2ce805f2f' \
-            "  $RUNNER_TEMP/ksunext-compat.patch" | sha256sum -c -
+          printf '%s  %s\n' \
+            'b1f3ea7f4f3c8fe104ae1a0ad8fc3a67a0971eb3fc5f9be43b0856e2ce805f2f' \
+            "$RUNNER_TEMP/ksunext-compat.patch" | sha256sum -c -
           PATCH_SHA="$(sha256sum "$RUNNER_TEMP/ksunext-compat.patch" | cut -d' ' -f1)"
           echo "KERNEL_CACHE_KEY=tachyon-r0s-a15-$KERNEL_PIN-ksu-$KSU_PIN-patch-$PATCH_SHA-ubuntu2404-v1" >> "$GITHUB_ENV"
 

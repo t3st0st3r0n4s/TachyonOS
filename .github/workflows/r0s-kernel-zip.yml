@@ -167,7 +167,6 @@ jobs:
           zips=("$SRC"/build/out/r0s/*_r0s_UNOFFICIAL_KSU_*.zip)
           [[ "${#zips[@]}" -eq 1 ]] || exit 2
           native="$(basename "${zips[0]}")"
-          # Bash needs braces around KSU_TAG before the underscore.
           name="${native/_r0s_UNOFFICIAL_KSU_/_r0s_KSUNext-${KSU_TAG}_}"
           [[ "$name" != "$native" && "$name" == *.zip ]] || exit 2
           cp "${zips[0]}" "out/$name"
@@ -180,7 +179,9 @@ jobs:
                       *(f"files/{name}.img" for name in parts)}
           with zipfile.ZipFile(archive) as z:
               names = z.namelist()
-              assert len(names) == len(expected) and set(names) == expected
+              assert len(names) == len(set(names))
+              files = {entry.filename for entry in z.infolist() if not entry.is_dir()}
+              assert len(files) == len(expected) and files == expected
               assert z.testzip() is None
               for name in parts:
                   image = root / "build/out/r0s" / (name + ".img")

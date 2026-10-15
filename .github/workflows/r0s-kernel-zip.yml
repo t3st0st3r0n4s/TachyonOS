@@ -47,9 +47,24 @@ jobs:
           ( cd out/fyi3-donors && sha256sum -c ../../ci_inputs/r0s_a15_fyi3_donors.sha256 )
           [[ "$(head -c 8 out/fyi3-donors/boot.img)" == 'ANDROID!' ]]
           [[ "$(head -c 8 out/fyi3-donors/vendor_boot.img)" == 'VNDRBOOT' ]]
-          [[ "$(stat -c %s out/fyi3-donors/boot.img)" -le 67108864 ]]
-          [[ "$(stat -c %s out/fyi3-donors/vendor_boot.img)" -le 33554432 ]]
-          echo 'FYI3 Odin source bytes verified; donor images remain read-only.'
+          [[ "$(stat -c %s out/fyi3-donors/boot.img)" -eq 67108864 ]]
+          [[ "$(stat -c %s out/fyi3-donors/vendor_boot.img)" -eq 33554432 ]]
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          for name in ("boot.img", "vendor_boot.img"):
+              path = Path("out/fyi3-donors") / name
+              with path.open("rb") as source:
+                  source.seek(-64, 2)
+                  magic, major, minor, original, offset, length, unused = struct.unpack(
+                      ">4sIIQQQ28s", source.read(64))
+                  assert magic == b"AVBf" and major == 1, name + " AVB footer"
+                  assert 0 < original < offset < path.stat().st_size, name + " AVB offset"
+                  assert 0 < length <= path.stat().st_size - offset, name + " AVB size"
+                  source.seek(offset)
+                  assert source.read(4) == b"AVB0", name + " vbmeta header"
+          print("FYI3 Odin donor image SHA256 / Android headers / AVB PASS")
+          PY
 
       - name: Free runner disk for the original ExtremeKRNL build
         shell: bash
@@ -86,7 +101,7 @@ jobs:
           git -C "$SRC" submodule sync --recursive
           git -C "$SRC" submodule update --init --recursive
           KSU_TAG="$(gh api repos/KernelSU-Next/KernelSU-Next/releases/latest --jq .tag_name)"
-          [[ "$KSU_TAG" =~ ^v[0-9]+$.[0-9]+$.[0-9]+$ ]]
+          [[ "$KSU_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           git -C "$SRC/KernelSU-Next" fetch origin "refs/tags/$KSU_TAG:refs/tags/$KSU_TAG"
           KSU_PIN="$(git -C "$SRC/KernelSU-Next" rev-parse "refs/tags/$KSU_TAG^{commit}")"
           git -C "$SRC/KernelSU-Next" checkout --detach "$KSU_PIN"
@@ -125,6 +140,10 @@ jobs:
           SRC="$RUNNER_TEMP/extremekrnl-r0s"
           if [[ "${{ steps.kernel_cache.outputs.cache-hit }}" == 'true' ]]; then
             echo 'EXACT KERNEL/KSU/PATCH CACHE HIT: no recompilation.'
+            test "$(sed -n 's/^source=//p' "$SRC/build/out/r0s/.tachyon_a15_kernel_host_pass")" = "$KERNEL_PIN"
+            test "$(sed -n 's/^ksunext=//p' "$SRC/build/out/r0s/.tachyon_a15_kernel_host_pass")" = "$KSU_PIN"
+            test "$(sed -n 's/^patch=//p' "$SRC/build/out/r0s/.tachyon_a15_kernel_host_pass")" = \
+              "$(sha256sum "$RUNNER_TEMP/ksunext-compat.patch" | cut -d' ' -f1)"
           else
             echo 'CACHE MISS: compile with original TachyonOS ExtremeKRNL invocation.'
             git -C "$SRC" apply --check "$RUNNER_TEMP/ksunext-compat.patch"
@@ -135,6 +154,7 @@ jobs:
             trap - EXIT
           fi
           grep -Fxq 'CONFIG_KSU=y' "$SRC/out/.config"
+          grep -Fxq 'CONFIG_MODVERSIONS=y' "$SRC/out/.config"
           test -s "$SRC/build/out/r0s/boot.img"
           test -s "$SRC/build/out/r0s/vendor_boot.img"
           test -s "$SRC/build/out/r0s/dtbo.img"

@@ -1,0 +1,220 @@
+name: TachyonOS r0s FYI3 kernel ZIP (HOST ONLY)
+
+on:
+  # This workflow is on an experimental branch, not the default branch.
+  # Edit the marker explicitly to start a run; ordinary commits never trigger.
+  push:
+    branches: [r0s-fyi3-kernel-ci]
+    paths: [ci_inputs/r0s_a15_kernel_ci.run]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tachyon-r0s-a15-kernel-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  kernel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KERNEL_REMOTE: https://github.com/ExtremeXT/android_kernel_samsung_s5e9925.git
+      KERNEL_PIN: 9ac30b43ebf74a607bf778d479609ab7ccf0797b
+      DONOR_TAG: r0s-a15-fyi3-donors-v1
+    steps:
+      - name: Require retained FYI3 Odin image contract BEFORE expensive setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci_inputs
+          curl --fail --location --retry 3 --silent --show-error \
+            "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/ci_inputs/r0s_a15_fyi3_donors.sha256" \
+            -o ci_inputs/r0s_a15_fyi3_donors.sha256
+          mapfile -t pins < <(grep -vE '^[[:space:]]*(#|$)' ci_inputs/r0s_a15_fyi3_donors.sha256)
+          [[ "${#pins[@]}" -eq 2 ]] || {
+            echo '::error::FYI3 boot/vendor_boot SHA256 manifest PENDING. Extract Odin AP first; no kernel compilation started.'
+            exit 2
+          }
+          printf '%s\n' "${pins[@]}" | grep -Eq '^[a-f0-9]{64}  boot.img$'
+          printf '%s\n' "${pins[@]}" | grep -Eq '^[a-f0-9]{64}  vendor_boot.img$'
+          mkdir -p out/fyi3-donors
+          gh release download "$DONOR_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'boot.img' --pattern 'vendor_boot.img' --dir out/fyi3-donors
+          [[ "$(find out/fyi3-donors -maxdepth 1 -type f | wc -l)" -eq 2 ]]
+          ( cd out/fyi3-donors && sha256sum -c ../../ci_inputs/r0s_a15_fyi3_donors.sha256 )
+          [[ "$(head -c 8 out/fyi3-donors/boot.img)" == 'ANDROID!' ]]
+          [[ "$(head -c 8 out/fyi3-donors/vendor_boot.img)" == 'VNDRBOOT' ]]
+          [[ "$(stat -c %s out/fyi3-donors/boot.img)" -le 67108864 ]]
+          [[ "$(stat -c %s out/fyi3-donors/vendor_boot.img)" -le 33554432 ]]
+          echo 'FYI3 Odin source bytes verified; donor images remain read-only.'
+
+      - name: Free runner disk for the original ExtremeKRNL build
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /usr/local/share/powershell \
+            /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup
+          sudo docker image prune -af || true
+          sudo docker builder prune -af || true
+          free="$(df -B1 --output=avail "$RUNNER_TEMP" | tail -1 | tr -d ' ')"
+          (( free >= 24 * 1024 * 1024 * 1024 ))
+
+      - name: Install only kernel build and recovery packaging tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends \
+            git make python3 cpio lz4 zip unzip kmod bc bison flex libssl-dev \
+            libelf-dev xz-utils zstd
+          for tool in git make python3 cpio lz4 zip unzip modinfo sha256sum; do
+            command -v "$tool" >/dev/null
+          done
+
+      - name: Get TachyonOS-pinned ExtremeKRNL and latest stable KernelSU Next
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$RUNNER_TEMP/extremekrnl-r0s"
+          git clone --filter=blob:none "$KERNEL_REMOTE" "$SRC"
+          git -C "$SRC" cat-file -e "$KERNEL_PIN^{commit}"
+          git -C "$SRC" checkout --detach "$KERNEL_PIN"
+          [[ "$(git -C "$SRC" rev-parse HEAD)" == "$KERNEL_PIN" ]]
+          git -C "$SRC" submodule sync --recursive
+          git -C "$SRC" submodule update --init --recursive
+          KSU_TAG="$(gh api repos/KernelSU-Next/KernelSU-Next/releases/latest --jq .tag_name)"
+          [[ "$KSU_TAG" =~ ^v[0-9]+$.[0-9]+$.[0-9]+$ ]]
+          git -C "$SRC/KernelSU-Next" fetch origin "refs/tags/$KSU_TAG:refs/tags/$KSU_TAG"
+          KSU_PIN="$(git -C "$SRC/KernelSU-Next" rev-parse "refs/tags/$KSU_TAG^{commit}")"
+          git -C "$SRC/KernelSU-Next" checkout --detach "$KSU_PIN"
+          [[ "$(git -C "$SRC/KernelSU-Next" rev-parse HEAD)" == "$KSU_PIN" ]]
+          echo "KSU_TAG=$KSU_TAG" >> "$GITHUB_ENV"
+          echo "KSU_PIN=$KSU_PIN" >> "$GITHUB_ENV"
+          test -s "$SRC/build/updater-script"
+          test -s "$SRC/arch/arm64/configs/ksu.config"
+          echo "Pinned ExtremeKRNL: $KERNEL_PIN; stable KernelSU Next: $KSU_TAG ($KSU_PIN)"
+
+      - name: Stage existing TachyonOS compatibility patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --silent --show-error \
+            "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/platform/exynos2200/patches/extremekrnl/ksunext-v3.4.0-compat.patch" \
+            -o "$RUNNER_TEMP/ksunext-compat.patch"
+          echo 'b1f3ea7f4f3c8fe104ae1a0ad8fc3a67a0971eb3fc5f9be43b0856e2ce805f2f' \
+            "  $RUNNER_TEMP/ksunext-compat.patch" | sha256sum -c -
+          PATCH_SHA="$(sha256sum "$RUNNER_TEMP/ksunext-compat.patch" | cut -d' ' -f1)"
+          echo "KERNEL_CACHE_KEY=tachyon-r0s-a15-$KERNEL_PIN-ksu-$KSU_PIN-patch-$PATCH_SHA-ubuntu2404-v1" >> "$GITHUB_ENV"
+
+      - name: Restore exact compiled kernel cache
+        id: kernel_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.temp }}/extremekrnl-r0s/build/out/r0s
+            ${{ runner.temp }}/extremekrnl-r0s/out/.config
+          key: ${{ env.KERNEL_CACHE_KEY }}
+
+      - name: Reuse cached compilation or run original upstream build once
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$RUNNER_TEMP/extremekrnl-r0s"
+          if [[ "${{ steps.kernel_cache.outputs.cache-hit }}" == 'true' ]]; then
+            echo 'EXACT KERNEL/KSU/PATCH CACHE HIT: no recompilation.'
+          else
+            echo 'CACHE MISS: compile with original TachyonOS ExtremeKRNL invocation.'
+            git -C "$SRC" apply --check "$RUNNER_TEMP/ksunext-compat.patch"
+            git -C "$SRC" apply "$RUNNER_TEMP/ksunext-compat.patch"
+            trap 'git -C "$SRC" apply --reverse "$RUNNER_TEMP/ksunext-compat.patch" || true' EXIT
+            ( cd "$SRC" && bash ./build.sh -m r0s -k y )
+            git -C "$SRC" apply --reverse "$RUNNER_TEMP/ksunext-compat.patch"
+            trap - EXIT
+          fi
+          grep -Fxq 'CONFIG_KSU=y' "$SRC/out/.config"
+          test -s "$SRC/build/out/r0s/boot.img"
+          test -s "$SRC/build/out/r0s/vendor_boot.img"
+          test -s "$SRC/build/out/r0s/dtbo.img"
+          for mod in fingerprint fingerprint_sysfs input_booster_lkm sec_debug_coredump wlan; do
+            test -s "$SRC/build/out/r0s/modules_dlkm/$mod.ko"
+          done
+          shopt -s nullglob
+          zips=("$SRC"/build/out/r0s/*_r0s_UNOFFICIAL_KSU_*.zip)
+          [[ "${#zips[@]}" -eq 1 ]] || { echo 'Expected one upstream ExtremeKRNL kernel ZIP' >&2; exit 2; }
+          printf 'source=%s\nksunext=%s\npatch=%s\nhost_only=true\nboard_pass=false\n' \
+            "$KERNEL_PIN" "$KSU_PIN" "$(sha256sum "$RUNNER_TEMP/ksunext-compat.patch" | cut -d' ' -f1)" \
+            > "$SRC/build/out/r0s/.tachyon_a15_kernel_host_pass"
+
+      - name: Save compilation immediately before package/publication checks
+        if: steps.kernel_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ runner.temp }}/extremekrnl-r0s/build/out/r0s
+            ${{ runner.temp }}/extremekrnl-r0s/out/.config
+          key: ${{ env.KERNEL_CACHE_KEY }}
+
+      - name: Validate original five-file TWRP ZIP and package two-level asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$RUNNER_TEMP/extremekrnl-r0s"
+          mkdir -p out
+          shopt -s nullglob
+          zips=("$SRC"/build/out/r0s/*_r0s_UNOFFICIAL_KSU_*.zip)
+          [[ "${#zips[@]}" -eq 1 ]] || exit 2
+          native="$(basename "${zips[0]}")"
+          # Bash needs braces around KSU_TAG before the underscore.
+          name="${native/_r0s_UNOFFICIAL_KSU_/_r0s_KSUNext-${KSU_TAG}_}"
+          [[ "$name" != "$native" && "$name" == *.zip ]] || exit 2
+          cp "${zips[0]}" "out/$name"
+          python3 - "$SRC" "out/$name" <<'PY'
+          import hashlib, pathlib, sys, zipfile
+          root, archive = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+          parts = ("boot", "vendor_boot", "dtbo")
+          expected = {"META-INF/com/google/android/update-binary",
+                      "META-INF/com/google/android/updater-script",
+                      *(f"files/{name}.img" for name in parts)}
+          with zipfile.ZipFile(archive) as z:
+              names = z.namelist()
+              assert len(names) == len(expected) and set(names) == expected
+              assert z.testzip() is None
+              for name in parts:
+                  image = root / "build/out/r0s" / (name + ".img")
+                  assert hashlib.sha256(z.read(f"files/{name}.img")).digest() == \
+                         hashlib.sha256(image.read_bytes()).digest()
+              for name in ("update-binary", "updater-script"):
+                  assert z.read("META-INF/com/google/android/" + name) == \
+                         (root / "build" / name).read_bytes()
+          print("ORIGINAL EXTREMEKRNL FIVE-MEMBER RECOVERY ZIP HOST VERIFY PASS")
+          PY
+          tar -C out -cJf "out/${name%.zip}.tar.xz" "$name"
+          [[ "$(tar -tJf "out/${name%.zip}.tar.xz")" == "$name" ]]
+          echo "Kernel ZIP SHA256: $(sha256sum "out/$name" | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
+          echo 'A15 HOST ONLY / FYI3 Odin donors SHA256-verified / runtime still deferred' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish one tar.xz as TachyonOS pre-release (no Actions outer ZIP)
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(out/*_r0s_KSUNext-*.tar.xz)
+          [[ "${#archives[@]}" -eq 1 ]] || exit 2
+          archive="${archives[0]}"
+          name="$(basename "$archive" .tar.xz)"
+          [[ "$(tar -tJf "$archive")" == "$name.zip" ]]
+          tag="r0s-a15-fyi3-$name"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$archive" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" "$archive" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --prerelease \
+              --title "ExtremeKRNL Nexus-2200 | KernelSU Next $KSU_TAG | r0s A15" \
+              --notes 'SM-S901B / TachyonOS FYI3. HOST ONLY: verified upstream recovery ZIP and FYI3 Odin donor checksums; new kernel/runtime requires device qualification. Extract .tar.xz for the TWRP ZIP.'
+          fi
+          [[ "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" \
+            --json assets --jq '.assets | length')" -eq 1 ]]
+          echo "Pre-release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"

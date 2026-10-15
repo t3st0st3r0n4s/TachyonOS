@@ -1,0 +1,2 @@
+# PENDING: replace after extracting native FYI3 boot.img and vendor_boot.img from retained Odin AP.
+# Required format: <64-lowercase-SHA256><two spaces><filename>; exactly two non-comment lines.

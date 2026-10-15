@@ -31,7 +31,7 @@ kernel packaging code, or change installed `vendor_dlkm`.
 - ROM-preloaded KernelSU manager selection is outside the scope of this
   kernel-only branch. Updating the kernel does not implicitly update its APK.
 
-## Pinned FYI3 Odin donors — upload complete; publication pending
+## Pinned FYI3 Odin donors — published and verified
 
 The original FYI3 Odin images were extracted and independently verified:
 
@@ -40,19 +40,18 @@ The original FYI3 Odin images were extracted and independently verified:
 | `boot.img` | 67,108,864 bytes | `0962dbdd67b748858189b46d464820ec7d1f3ea843cc7c3d033b69c40931b44e` |
 | `vendor_boot.img` | 33,554,432 bytes | `383b6f6789e655b070929914db5639e6d9bacc78823ada7bf553962b5b4888be` |
 
-Both files are already uploaded to an unpublished GitHub **draft pre-release**
-(ID `414253487`). GitHub's reported SHA-256 values match
-`ci_inputs/r0s_a15_fyi3_donors.sha256`. Do not upload them again.
+Both files are published in the GitHub pre-release
+[`r0s-a15-fyi3-donors-v1`](https://github.com/t3st0st3r0n4s/TachyonOS/releases/tag/r0s-a15-fyi3-donors-v1)
+(release ID `414253487`). GitHub's asset SHA-256 values match
+`ci_inputs/r0s_a15_fyi3_donors.sha256`. No upload is needed.
 
-Publish that existing draft with the tag
-`r0s-a15-fyi3-donors-v1`, retaining exactly the two image assets.
-The CI downloads by stable release tag, verifies full SHA-256, exact sizes,
+The CI downloads the release by tag, verifies full SHA-256, exact sizes,
 Android boot headers and AVB footers before costly runner setup. Images are
 read-only references, **never replacements** for the proven A15 upstream
 ExtremeKRNL recovery ZIP.
 
-After the donor release is published, start **one intentional run** by
-editing `ci_inputs/r0s_a15_kernel_ci.run` in a new commit on
+To start **one intentional run**, edit
+`ci_inputs/r0s_a15_kernel_ci.run` in a new commit on
 `r0s-fyi3-kernel-ci`. Ordinary branch commits never start the runner.
 `workflow_dispatch` only becomes available when the workflow exists
 on the repository's default branch; the working ROM branch is untouched.
@@ -64,7 +63,7 @@ GZH3 reconciliation. The FYI3 donor images are immutable reference/identity
 inputs for this workflow, not replacement ramdisks or a reason to rewrite the
 working A15 kernel ZIP layout.
 
-**Qualification:** SOURCE PREPARED / DONOR BYTES VERIFIED / DRAFT UPLOADED / CI NOT RUN. Neither a
+**Qualification:** SOURCE PREPARED / FYI3 DONOR RELEASE VERIFIED / CI NOT RUN. Neither a
 newer KernelSU release nor a fresh cloud-created kernel ZIP is device-tested.
 The ZIP does not update `vendor_dlkm`; module compatibility with the installed
 ROM must be checked before flashing an untested kernel update.

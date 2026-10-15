@@ -31,30 +31,31 @@ kernel packaging code, or change installed `vendor_dlkm`.
 - ROM-preloaded KernelSU manager selection is outside the scope of this
   kernel-only branch. Updating the kernel does not implicitly update its APK.
 
-## Waiting for FYI3 Odin inputs — NO BUILD
+## Pinned FYI3 Odin donors — upload complete; publication pending
 
-The cloud run is intentionally blocked by
-`ci_inputs/r0s_a15_fyi3_donors.sha256`, currently **PENDING**.
+The original FYI3 Odin images were extracted and independently verified:
 
-When the saved FYI3 Odin **AP** archive is available, extract **native**
-`boot.img` and `vendor_boot.img` (decompress any `.lz4` wrappers). Do not
-substitute ExtremeKRNL-generated images or UN1CA A16 images.
+| Asset | Exact size | SHA-256 |
+| --- | ---: | --- |
+| `boot.img` | 67,108,864 bytes | `0962dbdd67b748858189b46d464820ec7d1f3ea843cc7c3d033b69c40931b44e` |
+| `vendor_boot.img` | 33,554,432 bytes | `383b6f6789e655b070929914db5639e6d9bacc78823ada7bf553962b5b4888be` |
 
-Publish those exact two original files as assets of a **TachyonOS GitHub
-pre-release** tagged `r0s-a15-fyi3-donors-v1`. Replace the pending manifest
-with exactly these two `sha256sum`-format entries:
+Both files are already uploaded to an unpublished GitHub **draft pre-release**
+(ID `414253487`). GitHub's reported SHA-256 values match
+`ci_inputs/r0s_a15_fyi3_donors.sha256`. Do not upload them again.
 
-```text
-<sha256-of-native-boot>  boot.img
-<sha256-of-native-vendor-boot>  vendor_boot.img
-```
+Publish that existing draft with the tag
+`r0s-a15-fyi3-donors-v1`, retaining exactly the two image assets.
+The CI downloads by stable release tag, verifies full SHA-256, exact sizes,
+Android boot headers and AVB footers before costly runner setup. Images are
+read-only references, **never replacements** for the proven A15 upstream
+ExtremeKRNL recovery ZIP.
 
-Only after verifying the donor release and manifest, manually **edit**
-`ci_inputs/r0s_a15_kernel_ci.run` in a new commit on the experimental branch.
-That marker change is the only enabled push-trigger path; ordinary commits to
-the workflow or docs will **not** start a build. GitHub
-`workflow_dispatch` is available only after the workflow also exists on the
-repository default branch; leave the stable branch untouched for now.
+After the donor release is published, start **one intentional run** by
+editing `ci_inputs/r0s_a15_kernel_ci.run` in a new commit on
+`r0s-fyi3-kernel-ci`. Ordinary branch commits never start the runner.
+`workflow_dispatch` only becomes available when the workflow exists
+on the repository's default branch; the working ROM branch is untouched.
 
 The first actual cloud run may require a full ExtremeKRNL compilation because
 the deleted host artifacts are not in GitHub's compilation cache. The existing
@@ -63,7 +64,7 @@ GZH3 reconciliation. The FYI3 donor images are immutable reference/identity
 inputs for this workflow, not replacement ramdisks or a reason to rewrite the
 working A15 kernel ZIP layout.
 
-**Qualification:** SOURCE PREPARED / CI NOT RUN / DONORS PENDING. Neither a
+**Qualification:** SOURCE PREPARED / DONOR BYTES VERIFIED / DRAFT UPLOADED / CI NOT RUN. Neither a
 newer KernelSU release nor a fresh cloud-created kernel ZIP is device-tested.
 The ZIP does not update `vendor_dlkm`; module compatibility with the installed
 ROM must be checked before flashing an untested kernel update.
